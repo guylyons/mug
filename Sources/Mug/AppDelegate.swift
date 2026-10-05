@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     ]
     private var selectedIndex: Int?
     private var optionItems: [NSMenuItem] = []
+    private var steamTimer: Timer?
+    private var steamPhase: CGFloat = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -85,7 +87,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let active = caffeinator.isActive
         if !active { selectedIndex = nil }
 
-        statusItem.button?.image = MugIcon.image(steaming: active)
+        statusItem.button?.image = MugIcon.image(steaming: active, phase: steamPhase)
+        animateSteam(active && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         statusItem.button?.toolTip = active ? "Mug: keeping your Mac awake" : "Mug: off"
 
         for item in optionItems {
@@ -94,6 +97,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         offItem.isEnabled = active
         mouseItem.state = caffeinator.movesMouse ? .on : .off
         statusLine.title = statusText()
+    }
+
+    private func animateSteam(_ on: Bool) {
+        guard on != (steamTimer != nil) else { return }
+        steamTimer?.invalidate()
+        steamTimer = nil
+        guard on else { return }
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            steamPhase += .pi / 15 // one full sway every 3s
+            statusItem.button?.image = MugIcon.image(steaming: true, phase: steamPhase)
+        }
+        RunLoop.main.add(timer, forMode: .common) // keep animating while the menu is open
+        steamTimer = timer
     }
 
     private func statusText() -> String {

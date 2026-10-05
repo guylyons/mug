@@ -3,7 +3,8 @@ import AppKit
 /// Draws the menu bar mug. Rendered as a template image so macOS tints it
 /// white on a dark menu bar and black on a light one.
 enum MugIcon {
-    static func image(steaming: Bool) -> NSImage {
+    /// `phase` (radians) sways the steam; advance it over time to animate.
+    static func image(steaming: Bool, phase: CGFloat = 0) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { _ in
             NSColor.black.setStroke()
@@ -40,14 +41,16 @@ enum MugIcon {
             handle.stroke()
 
             if steaming {
-                for x in [5.0, 9.0] {
+                for (i, x) in [5.0, 9.0].enumerated() {
+                    // Wisps sway out of step with each other.
+                    let sway = 1.75 * cos(phase + CGFloat(i) * .pi)
                     let steam = NSBezierPath()
                     steam.lineWidth = 1.25
                     steam.lineCapStyle = .round
                     steam.move(to: NSPoint(x: x, y: 11.75))
                     steam.curve(to: NSPoint(x: x, y: 16.75),
-                                controlPoint1: NSPoint(x: x + 1.75, y: 13.5),
-                                controlPoint2: NSPoint(x: x - 1.75, y: 15))
+                                controlPoint1: NSPoint(x: x + sway, y: 13.5),
+                                controlPoint2: NSPoint(x: x - sway, y: 15))
                     steam.stroke()
                 }
             }
