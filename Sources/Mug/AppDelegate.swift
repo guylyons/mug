@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let statusLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let offItem = NSMenuItem(title: "Turn Off", action: #selector(turnOff), keyEquivalent: "")
+    private let mouseItem = NSMenuItem(title: "Also Move Mouse", action: #selector(toggleMouse), keyEquivalent: "")
 
     /// Durations offered in the menu, in minutes. nil means indefinitely.
     private let options: [(title: String, minutes: Int?)] = [
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = buildMenu()
 
         caffeinator.onChange = { [weak self] in self?.refresh() }
+        caffeinator.movesMouse = UserDefaults.standard.bool(forKey: "movesMouse")
         refresh()
     }
 
@@ -49,6 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        mouseItem.target = self
+        mouseItem.toolTip = "Nudges the cursor every minute you're idle, so chat apps don't mark you away"
+        menu.addItem(mouseItem)
         offItem.target = self
         menu.addItem(offItem)
         menu.addItem(.separator())
@@ -66,6 +71,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         caffeinator.stop()
     }
 
+    @objc private func toggleMouse() {
+        caffeinator.movesMouse.toggle()
+        UserDefaults.standard.set(caffeinator.movesMouse, forKey: "movesMouse")
+        if caffeinator.movesMouse {
+            // Prompts for Accessibility permission if not yet granted.
+            AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary)
+        }
+        refresh()
+    }
+
     private func refresh() {
         let active = caffeinator.isActive
         if !active { selectedIndex = nil }
@@ -77,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.state = (item.tag == selectedIndex) ? .on : .off
         }
         offItem.isEnabled = active
+        mouseItem.state = caffeinator.movesMouse ? .on : .off
         statusLine.title = statusText()
     }
 

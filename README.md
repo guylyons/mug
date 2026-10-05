@@ -4,6 +4,9 @@ A dead simple macOS menu bar app that keeps your Mac awake.
 
 - Pick **Indefinitely**, 5, 10, 15, 30 minutes, 1 hour or 2 hours from the menu.
 - The menu bar mug steams while it's keeping the Mac awake, and sits empty when it's not.
+- **Also Move Mouse** (optional) nudges the cursor 1pt and back after each idle minute, so chat apps
+  don't mark you away. Needs Accessibility permission (System Settings → Privacy & Security →
+  Accessibility); macOS asks the first time you turn it on.
 - **Turn Off** (or quitting) lets the Mac sleep normally again.
 
 Under the hood it holds an IOKit `PreventUserIdleDisplaySleep` assertion — check it with
