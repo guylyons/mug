@@ -41,16 +41,19 @@ enum MugIcon {
             handle.stroke()
 
             if steaming {
-                for (i, x) in [5.0, 9.0].enumerated() {
-                    // Wisps sway out of step with each other.
-                    let sway = 1.75 * cos(phase + CGFloat(i) * .pi)
+                for x in [5.0, 9.0] {
+                    // A sine wave travelling up the wisp, anchored at the cup and
+                    // widening as it rises.
                     let steam = NSBezierPath()
                     steam.lineWidth = 1.25
                     steam.lineCapStyle = .round
-                    steam.move(to: NSPoint(x: x, y: 11.75))
-                    steam.curve(to: NSPoint(x: x, y: 16.75),
-                                controlPoint1: NSPoint(x: x + sway, y: 13.5),
-                                controlPoint2: NSPoint(x: x - sway, y: 15))
+                    steam.lineJoinStyle = .round
+                    for step in 0...20 {
+                        let t = CGFloat(step) / 20
+                        let wave = sin(t * 3 * .pi - phase)
+                        let point = NSPoint(x: x + 1.25 * (0.3 + 0.7 * t) * wave, y: 11.75 + 5 * t)
+                        step == 0 ? steam.move(to: point) : steam.line(to: point)
+                    }
                     steam.stroke()
                 }
             }
