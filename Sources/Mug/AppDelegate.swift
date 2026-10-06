@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
 
+        menu.addItem(.separator())
         workHoursItem.target = self
         menu.addItem(workHoursItem)
         let editItem = NSMenuItem(title: "Set Work Hours…", action: #selector(editWorkHours), keyEquivalent: "")
@@ -71,7 +72,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         offItem.target = self
         menu.addItem(offItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Mug", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let quitItem = NSMenuItem(title: "Quit Mug", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(quitItem)
+
+        let icons = [
+            (workHoursItem, "briefcase"), (editItem, "clock"),
+            (mouseItem, "cursorarrow.motionlines"), (offItem, "power"), (quitItem, "xmark.circle"),
+        ]
+        for (item, symbol) in icons {
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        }
         return menu
     }
 
