@@ -28,5 +28,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --sign - "$APP"
+# Pin the designated requirement to the bundle ID, not the cdhash, so the Accessibility
+# grant survives rebuilds instead of silently going stale.
+codesign --force --sign - -r='designated => identifier "com.glyons.mug"' "$APP"
 echo "Built $APP"

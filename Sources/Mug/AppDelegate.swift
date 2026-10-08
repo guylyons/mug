@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         caffeinator.onChange = { [weak self] in self?.refresh() }
         caffeinator.movesMouse = UserDefaults.standard.bool(forKey: "movesMouse")
+        if caffeinator.movesMouse { promptForAccessibility() }
         setWorkHours(UserDefaults.standard.bool(forKey: "workHours"))
         refresh()
     }
@@ -184,11 +185,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleMouse() {
         caffeinator.movesMouse.toggle()
         UserDefaults.standard.set(caffeinator.movesMouse, forKey: "movesMouse")
-        if caffeinator.movesMouse {
-            // Prompts for Accessibility permission if not yet granted.
-            AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary)
-        }
+        if caffeinator.movesMouse { promptForAccessibility() }
         refresh()
+    }
+
+    /// Prompts for Accessibility permission if not yet granted. A rebuilt app can silently lose its
+    /// grant, leaving the toggle on in System Settings while every mouse event is dropped.
+    private func promptForAccessibility() {
+        AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary)
+    }
+
+    private func updateMouseItem() {
+        let blocked = caffeinator.movesMouse && !AXIsProcessTrusted()
+        mouseItem.title = blocked ? "Also Move Mouse (needs Accessibility)" : "Also Move Mouse"
     }
 
     private func refresh() {
@@ -205,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         workHoursItem.title = "During Work Hours (\(workHoursLabel()))"
         workHoursItem.state = workHours ? .on : .off
         mouseItem.state = caffeinator.movesMouse ? .on : .off
+        updateMouseItem()
         statusLine.title = statusText()
     }
 
@@ -224,5 +234,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Refresh the countdown each time the menu opens.
     func menuWillOpen(_ menu: NSMenu) {
         statusLine.title = statusText()
+        updateMouseItem()
     }
 }
