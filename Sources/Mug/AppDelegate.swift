@@ -35,6 +35,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         caffeinator.movesMouse = UserDefaults.standard.bool(forKey: "movesMouse")
         if caffeinator.movesMouse { promptForAccessibility() }
         setWorkHours(UserDefaults.standard.bool(forKey: "workHours"))
+        // The minute timer doesn't tick during sleep, so re-check work hours right away on wake.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.workHours else { return }
+            self.checkWorkHours()
+        }
         refresh()
     }
 
