@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Mug
+Comment=Keeps your computer awake
+Exec=mug
+Icon=mug
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true

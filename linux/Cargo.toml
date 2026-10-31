@@ -1,0 +1,23 @@
+[package]
+name = "mug"
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+description = "A dead simple Linux tray app that keeps your computer awake."
+
+[[bin]]
+name = "mug"
+path = "src/main.rs"
+
+[dependencies]
+ksni = "0.2"
+dbus = "0.9"
+tiny-skia = "0.11"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
