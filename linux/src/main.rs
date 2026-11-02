@@ -134,6 +134,10 @@ fn spawn_inhibitor(seconds: Option<u64>) -> Option<Child> {
 struct ScreenInhibit {
     conn: dbus::blocking::Connection,
     cookie: u32,
+    /// Unique bus name (e.g. `:1.458`) that owned `org.freedesktop.ScreenSaver`
+    /// when we inhibited. If this changes, the service restarted and silently
+    /// dropped our inhibit, so we must re-assert it. See `ensure_screen_inhibit`.
+    owner: Option<String>,
 }
 
 impl ScreenInhibit {
@@ -155,7 +159,8 @@ impl ScreenInhibit {
                 ("Mug", REASON),
             );
             if let Ok((cookie,)) = reply {
-                return Some(ScreenInhibit { conn, cookie });
+                let owner = screensaver_owner(&conn);
+                return Some(ScreenInhibit { conn, cookie, owner });
             }
         }
         None
@@ -180,6 +185,24 @@ impl Drop for ScreenInhibit {
             }
         }
     }
+}
+
+/// The unique bus name currently owning `org.freedesktop.ScreenSaver`, or
+/// `None` if nobody owns it right now (e.g. the proxy is mid-restart).
+fn screensaver_owner(conn: &dbus::blocking::Connection) -> Option<String> {
+    let proxy = conn.with_proxy(
+        "org.freedesktop.DBus",
+        "/org/freedesktop/DBus",
+        Duration::from_secs(5),
+    );
+    let (owner,): (String,) = proxy
+        .method_call(
+            "org.freedesktop.DBus",
+            "GetNameOwner",
+            ("org.freedesktop.ScreenSaver",),
+        )
+        .ok()?;
+    Some(owner)
 }
 
 /// Is `cmd` on PATH?
@@ -441,7 +464,38 @@ impl Mug {
         if self.work_hours {
             self.check_work_hours();
         }
+        self.ensure_screen_inhibit();
         self.maybe_jiggle();
+    }
+
+    /// Keep the `org.freedesktop.ScreenSaver` inhibit alive across service
+    /// restarts. GNOME's `gsd-screensaver-proxy` (and equivalents) can be
+    /// restarted out from under us — e.g. when the settings daemon reloads —
+    /// which drops every inhibit it was tracking. Our D-Bus connection stays
+    /// open and our cookie still looks valid on our side, so nothing fails and
+    /// nothing notices: the screen just quietly starts locking again while Mug
+    /// still shows as active. Guard against that by re-inhibiting whenever the
+    /// owner of the name changes, and by retrying if we never got one.
+    fn ensure_screen_inhibit(&mut self) {
+        if !self.active {
+            return;
+        }
+        match &self.screen {
+            Some(s) => {
+                // A changed owner means a fresh service instance that has no
+                // record of our cookie; re-inhibit against it. A momentarily
+                // absent owner (None) is a restart in progress — wait for the
+                // new owner rather than churn.
+                if let Some(current) = screensaver_owner(&s.conn) {
+                    if Some(&current) != s.owner.as_ref() {
+                        self.screen = ScreenInhibit::new();
+                    }
+                }
+            }
+            // The service was down when we started (or a re-inhibit just
+            // failed); keep trying until it answers.
+            None => self.screen = ScreenInhibit::new(),
+        }
     }
 
     fn maybe_jiggle(&mut self) {
